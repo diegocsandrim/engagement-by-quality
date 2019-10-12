@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"./git"
@@ -11,16 +10,17 @@ func main() {
 	namespace := "kelseyhightower"
 	project := "envconfig"
 
-	err := git.EnsureGitBaseDirExists()
+	gitRepo := git.NewGitRepo(namespace, project)
+
+	err := gitRepo.ForceClone()
 	if err != nil {
 		log.Panic(err)
 	}
 
-	err = git.Clone(namespace, project)
+	contributors, err := gitRepo.GetContributors()
 	if err != nil {
 		log.Panic(err)
 	}
 
-	constributors, err := git.GetContributors(namespace, project)
-	fmt.Printf("%v", constributors)
+	log.Printf("%+v", contributors)
 }
