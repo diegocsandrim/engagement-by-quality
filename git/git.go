@@ -2,16 +2,17 @@ package git
 
 import (
 	"fmt"
-	"log"
-	"os/exec"
 	"strings"
+
+	"../cmd"
 )
 
 const GitBaseDir string = "/src/github.com"
 
 type GitRepo struct {
-	namespace string
-	project   string
+	namespace  string
+	project    string
+	cmdFactory *cmd.CmdFactory
 }
 
 func NewGitRepo(namespace string, project string) *GitRepo {
@@ -19,33 +20,28 @@ func NewGitRepo(namespace string, project string) *GitRepo {
 		namespace: namespace,
 		project:   project,
 	}
+	g.cmdFactory = cmd.NewCmdFactory(g.projectDir())
 
 	return &g
 }
 
 func (g *GitRepo) ForceClone() error {
-	cmd := exec.Command("bash", "-c", fmt.Sprintf("mkdir -p %s", g.namespaceDir()))
-	_, err := execWithLog(cmd)
+	_, err := cmd.NewCmdFactory("/").ExecF("mkdir -p %s", g.namespaceDir())
 	if err != nil {
 		return err
 	}
 
-	cmd = exec.Command("bash", "-c", fmt.Sprintf("rm -rf %s", g.projectDir()))
-	_, err = execWithLog(cmd)
+	_, err = cmd.NewCmdFactory("/").ExecF("rm -rf %s", g.projectDir())
 	if err != nil {
 		return err
 	}
 
-	cmd = exec.Command("git", "clone", fmt.Sprintf("https://github.com/%s/%s.git", g.namespace, g.project))
-	cmd.Dir = g.namespaceDir()
-	_, err = execWithLog(cmd)
+	_, err = cmd.NewCmdFactory(g.namespaceDir()).ExecF("git clone https://github.com/%s/%s.git", g.namespace, g.project)
 	return err
 }
 
 func (g *GitRepo) GetContributors() ([]*Contributor, error) {
-	cmd := exec.Command("bash", "-c", "git log --all --no-merges --format='%aN <%aE>' | sort | uniq")
-	cmd.Dir = g.projectDir()
-	out, err := execWithLog(cmd)
+	out, err := g.cmdFactory.ExecF("git log --all --no-merges --format='%%aN <%%aE>' | sort | uniq")
 	if err != nil {
 		return nil, err
 	}
@@ -64,9 +60,7 @@ func (g *GitRepo) GetContributors() ([]*Contributor, error) {
 }
 
 func (g *GitRepo) GetContributorFirstCommit() ([]*Contributor, error) {
-	cmd := exec.Command("bash", "-c", "git log --all --no-merges --format='%aN <%aE>' | sort | uniq")
-	cmd.Dir = g.projectDir()
-	out, err := execWithLog(cmd)
+	out, err := g.cmdFactory.ExecF("git log --all --no-merges --format='%%aN <%%aE>' | sort | uniq")
 	if err != nil {
 		return nil, err
 	}
@@ -79,16 +73,6 @@ func (g *GitRepo) GetContributorFirstCommit() ([]*Contributor, error) {
 	}
 
 	return contributors, nil
-}
-
-func execWithLog(cmd *exec.Cmd) (string, error) {
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		log.Printf("command: %s", cmd.String())
-		log.Printf("output: %s", out)
-		return string(out), err
-	}
-	return string(out), nil
 }
 
 func (g *GitRepo) projectDir() string {
