@@ -1,12 +1,35 @@
 package git
 
 type Contributor struct {
-	Id string
+	Id          string
+	Commits     []*Commit
+	firstCommit *Commit
 }
 
 func NewContributor(id string) *Contributor {
 	c := Contributor{
-		Id: id,
+		Id:      id,
+		Commits: make([]*Commit, 0),
 	}
 	return &c
+}
+
+func (c *Contributor) AddCommit(commit *Commit) {
+	c.Commits = append(c.Commits, commit)
+
+	if c.firstCommit == nil {
+		c.firstCommit = commit
+	}
+
+	if commit.Date.Before(c.firstCommit.Date) {
+		c.firstCommit = commit
+	}
+}
+
+func (c *Contributor) FirstCommit() *Commit {
+	return c.firstCommit
+}
+
+func (c *Contributor) IsMainContributor() bool {
+	return c.FirstCommit().ParentHash == ""
 }

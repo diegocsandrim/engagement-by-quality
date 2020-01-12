@@ -17,10 +17,12 @@ func main() {
 		log.Panic(err)
 	}
 
-	contributors, err := gitRepo.GetContributors()
+	err = gitRepo.LoadCommits()
 	if err != nil {
 		log.Panic(err)
 	}
 
-	log.Printf("%+v", contributors)
+	for _, contributor := range gitRepo.Contributors() {
+		log.Printf("%s %s %s", contributor.Id, contributor.FirstCommit().Hash, contributor.FirstCommit().ParentHash)
+	}
 }
