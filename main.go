@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"sort"
+	"time"
 
 	"./git"
 	"./qualityanalyzers"
@@ -38,16 +39,22 @@ func main() {
 		gitRepo.ProjectDir(),
 	)
 
+	day := time.Hour * 24
+	analysisDate := time.Now().UTC().Add(-day * time.Duration(len(contributorAttractorCommits)))
 	for _, contributorAttractorCommit := range contributorAttractorCommits {
-		log.Printf("Analysing commit %s\n", contributorAttractorCommit.Commit.Hash)
+		analysisDate = analysisDate.Add(day)
+		shortCommitHash := contributorAttractorCommit.Commit.Hash[0:8]
+		log.Printf("Analysing commit %s\n", shortCommitHash)
 		err = gitRepo.Checkout(contributorAttractorCommit.Commit.Hash)
 		if err != nil {
 			log.Panic(err)
 		}
 
-		err = qualityAnalyzer.Run(contributorAttractorCommit.Commit.Hash[:8], contributorAttractorCommit.Commit.Date)
+		err = qualityAnalyzer.Run(shortCommitHash, analysisDate)
 		if err != nil {
 			log.Panic(err)
 		}
 	}
+	// TODO (minor): Remover arquivos temporários deixados pelo sonnar-scanner (problema de lock e de ownership)
+	// Ideia: docker exec usando o sonnar-scanner depois que ele terminou (nem sei se é possível)
 }
