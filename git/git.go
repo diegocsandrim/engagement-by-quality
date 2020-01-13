@@ -25,7 +25,7 @@ func NewGitRepo(namespace string, project string) *GitRepo {
 		namespace: namespace,
 		project:   project,
 	}
-	g.cmdFactory = cmd.NewCmdFactory(g.projectDir())
+	g.cmdFactory = cmd.NewCmdFactory(g.ProjectDir())
 
 	return &g
 }
@@ -36,7 +36,7 @@ func (g *GitRepo) ForceClone() error {
 		return err
 	}
 
-	_, err = cmd.NewCmdFactory("/").ExecF("rm -rf %s", g.projectDir())
+	_, err = cmd.NewCmdFactory("/").ExecF("rm -rf %s", g.ProjectDir())
 	if err != nil {
 		return err
 	}
@@ -49,7 +49,7 @@ func (g *GitRepo) LoadCommits() error {
 	g.commits = make(map[string]*Commit)
 	g.contributors = make(map[string]*Contributor)
 
-	commitsLog, err := g.cmdFactory.ExecF("git log --all --no-merges --format='%%H %%P %%at %%aE'")
+	commitsLog, err := g.cmdFactory.ExecF("git log --all --format='%%H %%at %%aE %%P'")
 	if err != nil {
 		return err
 	}
@@ -60,14 +60,14 @@ func (g *GitRepo) LoadCommits() error {
 			continue
 		}
 		splittedLogLine := strings.Split(commitLog, " ")
-		if len(splittedLogLine) != 4 {
+		if len(splittedLogLine) < 4 {
 			log.Panicf("commits log line is in a bad format: '%s'", commitLog)
 		}
 
 		commitHash := splittedLogLine[0]
-		parentCommitHash := splittedLogLine[1]
-		commitTimestampString := splittedLogLine[2]
-		contributorId := splittedLogLine[3]
+		commitTimestampString := splittedLogLine[1]
+		contributorId := splittedLogLine[2]
+		parentCommitHashs := splittedLogLine[3:]
 
 		contributor, contributorExists := g.contributors[contributorId]
 		if !contributorExists {
@@ -82,7 +82,7 @@ func (g *GitRepo) LoadCommits() error {
 
 		commitTimestamp := time.Unix(commitTimestampInt, 0)
 
-		commit := NewCommit(commitHash, parentCommitHash, commitTimestamp, contributor)
+		commit := NewCommit(commitHash, parentCommitHashs[0], commitTimestamp, contributor)
 		contributor.AddCommit(commit)
 
 		g.commits[commit.Hash] = commit
@@ -90,7 +90,7 @@ func (g *GitRepo) LoadCommits() error {
 	return nil
 }
 
-func (g *GitRepo) projectDir() string {
+func (g *GitRepo) ProjectDir() string {
 	return fmt.Sprintf("%s/%s/%s", GitBaseDir, g.namespace, g.project)
 }
 
@@ -105,4 +105,38 @@ func (g *GitRepo) Contributors() []*Contributor {
 		contributors = append(contributors, contributor)
 	}
 	return contributors
+}
+
+func (g *GitRepo) ContributorAttractorCommits() []*ContributorAttractorCommit {
+	contributorAttractorCommitsByCommitHash := make(map[string]*ContributorAttractorCommit)
+
+	for _, contributor := range g.contributors {
+		contributorFirstCommit := contributor.FirstCommit()
+		if contributorFirstCommit.ParentHash == "" {
+			continue
+		}
+		parentCommit := g.commits[contributorFirstCommit.ParentHash]
+		if parentCommit == nil {
+			log.Println("fail!")
+		}
+		contributorAttractorCommit, exists := contributorAttractorCommitsByCommitHash[parentCommit.Hash]
+		if !exists {
+			contributorAttractorCommit = NewContributorAttractorCommit(parentCommit)
+			contributorAttractorCommitsByCommitHash[parentCommit.Hash] = contributorAttractorCommit
+		}
+
+		contributorAttractorCommit.AddAttractedContributor(contributor)
+	}
+
+	contributorAttractorCommits := make([]*ContributorAttractorCommit, 0, len(contributorAttractorCommitsByCommitHash))
+	for _, contributorAttractorCommit := range contributorAttractorCommitsByCommitHash {
+		contributorAttractorCommits = append(contributorAttractorCommits, contributorAttractorCommit)
+	}
+
+	return contributorAttractorCommits
+}
+
+func (g *GitRepo) Checkout(ref string) error {
+	_, err := g.cmdFactory.ExecF("git checkout %s", ref)
+	return err
 }
