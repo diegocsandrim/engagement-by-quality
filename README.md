@@ -21,16 +21,12 @@ A-B-C-D-E
 # Running Sonar with PG
 
 ```
-docker network create sonar-net
-
-docker run --name sonar-postgres -e POSTGRES_USER=sonar -e POSTGRES_PASSWORD=sonar -d -p 5432:5432 --net sonar-net postgres:12
-
-docker run --name sonarqube -p 9000:9000 -e SONARQUBE_JDBC_USERNAME=sonar -e SONARQUBE_JDBC_PASSWORD=sonar -e SONARQUBE_JDBC_URL=jdbc:postgresql://sonar-postgres:5432/sonar -d --net sonar-net sonarqube
+sudo sysctl -w vm.max_map_count=262144 # or edit /etc/sysctl.conf
+docker-compose up
 ```
 
 # Clean up Sonar
 
 ```
-docker rm -v --force sonar-postgres sonarqube
-docker network rm sonar-net
+docker-compose down
 ```

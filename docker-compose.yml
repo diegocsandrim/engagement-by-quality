@@ -1,0 +1,30 @@
+version: '3'
+services:
+  sonar-postgres:
+    image: "postgres:12"
+    ports:
+        - "5432:5432"
+    environment:
+      POSTGRES_USER: sonar
+      POSTGRES_PASSWORD: sonar
+
+  sonarqube:
+    image: "sonarqube"
+    ports:
+        - "9000:9000"
+    environment:
+      SONARQUBE_JDBC_USERNAME: sonar
+      SONARQUBE_JDBC_PASSWORD: sonar
+      SONARQUBE_JDBC_URL: jdbc:postgresql://sonar-postgres:5432/sonar
+    depends_on:
+      - sonar-postgres
+  
+  pgadmin:
+    image: "dpage/pgadmin4"
+    ports:
+        - "8080:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    depends_on:
+      - sonar-postgres

@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bufio"
+	"fmt"
 	"log"
+	"os"
 	"sort"
+	"strings"
 	"time"
 
 	"./git"
@@ -34,13 +38,15 @@ func main() {
 
 	qualityAnalyzer := qualityanalyzers.NewSonnar(
 		qualityanalyzers.FormatProjectKey(namespace, project),
-		"e08c00b8a357612588fecabe92d1eb9971c7b74b",
+		"ac05a422f5d81b015e01f1a1e01a1344c542ea2a",
 		"http://localhost:9000",
 		gitRepo.ProjectDir(),
 	)
 
 	day := time.Hour * 24
 	analysisDate := time.Now().UTC().Add(-day * time.Duration(len(contributorAttractorCommits)))
+	reader := bufio.NewReader(os.Stdin)
+	silent := false
 	for _, contributorAttractorCommit := range contributorAttractorCommits {
 		analysisDate = analysisDate.Add(day)
 		shortCommitHash := contributorAttractorCommit.Commit.Hash[0:8]
@@ -48,6 +54,31 @@ func main() {
 		err = gitRepo.Checkout(contributorAttractorCommit.Commit.Hash)
 		if err != nil {
 			log.Panic(err)
+		}
+
+		for {
+			if silent {
+				break
+			}
+
+			fmt.Print("Continue Y (yes), n (no), s (silent)?: ")
+			text, _ := reader.ReadString('\n')
+			text = strings.Trim(strings.ToLower(text), "\n")
+			fmt.Println(text)
+
+			if text == "y" || text == "" {
+				break
+			}
+
+			if text == "n" {
+				os.Exit(0)
+			}
+
+			if text == "s" {
+				silent = true
+				break
+			}
+
 		}
 
 		err = qualityAnalyzer.Run(shortCommitHash, analysisDate)
