@@ -28,8 +28,26 @@ func NewSonnar(projectKey string, sonarLogin string, sonnarHostUrl string, proje
 }
 
 func (s *Sonnar) Run(projectVersion string, date time.Time) error {
+	output, err := s.cmdFactory.ExecF("mkdir -p ./72bd2909-e59c-459a-a739-1a7660e9d67d")
+	if err != nil {
+		return fmt.Errorf("failed to create report path: %w", err)
+	}
+
+	output, err = s.cmdFactory.ExecF(`docker run --rm -v $(pwd):/app -w /app golangci/golangci-lint:v1.23.3 \
+	golangci-lint run \
+	--out-format checkstyle \
+	--max-issues-per-linter=0 \
+	--timeout=5m \
+	--max-same-issues=0 \
+	--uniq-by-line=false \
+	--issues-exit-code=0 \
+	> ./72bd2909-e59c-459a-a739-1a7660e9d67d/report.xml`)
+	if err != nil {
+		return fmt.Errorf("failed to run golangci-lint: %w", err)
+	}
+
 	projectDate := date.UTC().Format("2006-01-02")
-	output, err := s.cmdFactory.ExecF(`docker run --name sonar-scanner --network host -dit -v %s:/root/src sonar-scanner:4 \
+	output, err = s.cmdFactory.ExecF(`docker run --name sonar-scanner --network host -dit -v %s:/root/src sonar-scanner:4.2 \
     -D sonar.host.url=%s \
     -D sonar.projectKey=%s \
     -D sonar.projectBaseDir=/root/src \
@@ -37,7 +55,10 @@ func (s *Sonnar) Run(projectVersion string, date time.Time) error {
 	-D sonar.projectVersion=%s \
 	-D sonar.projectDate=%s \
 	-D sonar.exclusions=**/vendor/**,**/*.cs,**/*.css,**/*.less,**/*.scss,**/*as,**/*.html,**/*.xhtml,**/*.cshtml,**/*.vbhtml,**/*.aspx,**/*.ascx,**/*.rhtml,**/*.erb,**/*.shtm,**/*.shtml,**/*.jsp,**/*.jspf,**/*.jspx,**/*.java,**/*.jav,**/*.js,**/*.jsx,**/*.vue,**/*.kt,**/*php,**/*php3,**/*php4,**/*php5,**/*phtml,**/*inc,**/*py,**/*.rb,**/*.scala,**/*.ts,**/*.tsx,**/*.vb,**/*.xml,**/*.xsd,**/*.xsl \
+	-D sonar.go.golangci-lint.reportPaths=/root/src/72bd2909-e59c-459a-a739-1a7660e9d67d/report.xml \
 	`, s.projectDir, s.sonnarHostUrl, s.projectKey, s.sonarLogin, projectVersion, projectDate)
+
+	//TODO: aqui falta colocar quantos contribuidores entraram no projeto, ao invés de assumir 1.  sonar.analysis.[yourKey]
 
 	if err != nil {
 		return fmt.Errorf("failed to start scanner: %w", err)

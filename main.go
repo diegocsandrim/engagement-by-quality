@@ -10,9 +10,9 @@ func main() {
 		namespace string
 		project   string
 	}{
-		{namespace: "Alluxio", project: "alluxio"},
+		// {namespace: "Alluxio", project: "alluxio"},
 
-		// {namespace: "kelseyhightower", project: "envconfig"},
+		{namespace: "kelseyhightower", project: "envconfig"},
 		// {namespace: "keybase", project: "client"},
 		// {namespace: "helm", project: "charts"},
 		// {namespace: "cockroachdb", project: "cockroach"},
@@ -35,7 +35,7 @@ func main() {
 		// {namespace: "prometheus", project: "prometheus"},
 	}
 
-	sonarKey := "0971341b9b41282b6216bb222bc326245098a822"
+	sonarKey := "390013c5cbfe8ece1c357436cf54402336ad1d46"
 	sonarUrl := "http://localhost:9000"
 	iterative := false
 

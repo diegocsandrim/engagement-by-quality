@@ -25,6 +25,14 @@ sudo sysctl -w vm.max_map_count=262144 # or edit /etc/sysctl.conf
 docker-compose up
 ```
 
+# Manual configuration
+
+//TODO automatizar:
+Necessário atualizar o plugin sonargo para importar relatório de issues do golangci-lint
+Administration > Marketplace > Search for SonarGo > Update to 1.6.0 (build 719)
+
+//TODO: talvez remover os plugins desnecessários, pois eles causam consomem tempo de análise.
+
 # Clean up Sonar
 
 ```

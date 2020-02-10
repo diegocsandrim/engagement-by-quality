@@ -1,6 +1,6 @@
 FROM openjdk:8-alpine
 
-ARG RELEASE=4.0.0.1744
+ARG RELEASE=4.2.0.1873
 
 LABEL maintainer="Ryan Mitchell <mitch@ryansmitchell.com>"
 

@@ -9,7 +9,7 @@ services:
       POSTGRES_PASSWORD: sonar
 
   sonarqube:
-    image: "sonarqube"
+    image: "sonarqube:7.9.2-community"
     ports:
         - "9000:9000"
     environment:
