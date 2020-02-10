@@ -45,17 +45,47 @@ func (g *GitRepo) ForceClone() error {
 	return err
 }
 
+func (g *GitRepo) Clone() error {
+	clearCommand := `git reset --hard HEAD && 
+git clean -f -d &&
+git checkout master &&
+git fetch origin master &&
+git reset --hard origin/master &&
+git pull`
+
+	_, err := cmd.NewCmdFactory(g.ProjectDir()).ExecF(clearCommand)
+	if err != nil {
+		log.Printf("failed to clone: %s. Will try to force clone", err.Error())
+		return g.ForceClone()
+	}
+	return nil
+}
+
+func (g *GitRepo) hasGoCode(fileNames []string) (bool, error) {
+	for _, fileName := range fileNames {
+		if strings.HasSuffix(fileName, ".go") {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 func (g *GitRepo) LoadCommits() error {
 	g.commits = make(map[string]*Commit)
 	g.contributors = make(map[string]*Contributor)
 
-	commitsLog, err := g.cmdFactory.ExecF("git log --all --format='%%H %%at %%aE %%P'")
+	commitLinePrefix := "commit:"
+	commitsLog, err := g.cmdFactory.ExecF("git log --all --format='%s%%H %%at %%aE %%P' --name-only", commitLinePrefix)
 	if err != nil {
 		return err
 	}
 
 	commitsLogLines := strings.Split(commitsLog, "\n")
-	for _, commitLog := range commitsLogLines {
+
+	for line := 0; line < len(commitsLogLines); line++ {
+		commitLog := commitsLogLines[line]
+
 		if commitLog == "" {
 			continue
 		}
@@ -64,10 +94,40 @@ func (g *GitRepo) LoadCommits() error {
 			log.Panicf("commits log line is in a bad format: '%s'", commitLog)
 		}
 
-		commitHash := splittedLogLine[0]
+		commitHash := splittedLogLine[0][len(commitLinePrefix):]
 		commitTimestampString := splittedLogLine[1]
 		contributorId := splittedLogLine[2]
 		parentCommitHashs := splittedLogLine[3:]
+
+		commitFileNames := make([]string, 0)
+
+		for {
+			if line+1 == len(commitsLogLines) {
+				break
+			}
+			nextLine := commitsLogLines[line+1]
+			if nextLine == "" {
+				line++
+				continue
+			}
+
+			if strings.HasPrefix(nextLine, commitLinePrefix) {
+				break
+			}
+
+			if strings.HasPrefix(nextLine, "warning: ") {
+				line++
+				continue
+			}
+
+			commitFileNames = append(commitFileNames, nextLine)
+			line++
+		}
+
+		hasGoCode, err := g.hasGoCode(commitFileNames)
+		if err != nil {
+			return err
+		}
 
 		contributor, contributorExists := g.contributors[contributorId]
 		if !contributorExists {
@@ -82,7 +142,7 @@ func (g *GitRepo) LoadCommits() error {
 
 		commitTimestamp := time.Unix(commitTimestampInt, 0)
 
-		commit := NewCommit(commitHash, parentCommitHashs[0], commitTimestamp, contributor)
+		commit := NewCommit(commitHash, parentCommitHashs[0], commitTimestamp, contributor, hasGoCode)
 		contributor.AddCommit(commit)
 
 		g.commits[commit.Hash] = commit
@@ -111,11 +171,14 @@ func (g *GitRepo) ContributorAttractorCommits() []*ContributorAttractorCommit {
 	contributorAttractorCommitsByCommitHash := make(map[string]*ContributorAttractorCommit)
 
 	for _, contributor := range g.contributors {
-		contributorFirstCommit := contributor.FirstCommit()
-		if contributorFirstCommit.ParentHash == "" {
+		contributorFirstGoCommit := contributor.FirstGoCommit()
+		if contributorFirstGoCommit == nil {
 			continue
 		}
-		parentCommit := g.commits[contributorFirstCommit.ParentHash]
+		if contributorFirstGoCommit.ParentHash == "" {
+			continue
+		}
+		parentCommit := g.commits[contributorFirstGoCommit.ParentHash]
 		if parentCommit == nil {
 			log.Println("fail!")
 		}

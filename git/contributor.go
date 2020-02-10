@@ -1,9 +1,10 @@
 package git
 
 type Contributor struct {
-	Id          string
-	Commits     []*Commit
-	firstCommit *Commit
+	Id            string
+	Commits       []*Commit
+	firstCommit   *Commit
+	firstGoCommit *Commit
 }
 
 func NewContributor(id string) *Contributor {
@@ -21,6 +22,10 @@ func (c *Contributor) AddCommit(commit *Commit) {
 		c.firstCommit = commit
 	}
 
+	if c.firstGoCommit == nil && commit.HasGoCode {
+		c.firstGoCommit = commit
+	}
+
 	if commit.Date.Before(c.firstCommit.Date) {
 		c.firstCommit = commit
 	}
@@ -28,6 +33,10 @@ func (c *Contributor) AddCommit(commit *Commit) {
 
 func (c *Contributor) FirstCommit() *Commit {
 	return c.firstCommit
+}
+
+func (c *Contributor) FirstGoCommit() *Commit {
+	return c.firstGoCommit
 }
 
 func (c *Contributor) IsMainContributor() bool {

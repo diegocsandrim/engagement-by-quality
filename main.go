@@ -1,91 +1,50 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
 	"log"
-	"os"
-	"sort"
-	"strings"
-	"time"
-
-	"./git"
-	"./qualityanalyzers"
 )
 
 func main() {
-	namespace := "kelseyhightower"
-	project := "envconfig"
+	// Some test list from https://github.com/search?l=&o=desc&q=language%3AGo+stars%3A%22%3E+15000%22&s=stars&type=Repositories
+	githubProjects := []struct {
+		namespace string
+		project   string
+	}{
+		{namespace: "Alluxio", project: "alluxio"},
 
-	gitRepo := git.NewGitRepo(namespace, project)
-
-	err := gitRepo.ForceClone()
-	if err != nil {
-		log.Panic(err)
+		// {namespace: "kelseyhightower", project: "envconfig"},
+		// {namespace: "keybase", project: "client"},
+		// {namespace: "helm", project: "charts"},
+		// {namespace: "cockroachdb", project: "cockroach"},
+		// {namespace: "kubernetes", project: "test-infra"},
+		// {namespace: "openshift", project: "origin"},
+		// {namespace: "pingcap", project: "tidb"},
+		// {namespace: "kubernetes", project: "kubernetes"},
+		// {namespace: "hashicorp", project: "terraform"},
+		// {namespace: "istio", project: "istio"},
+		// {namespace: "moby", project: "moby"},
+		// {namespace: "golang", project: "go"},
+		// {namespace: "kubernetes", project: "kubernetes"},
+		// {namespace: "moby", project: "moby"},
+		// {namespace: "gohugoio", project: "hugo"},
+		// {namespace: "gin-gonic", project: "gin"},
+		// {namespace: "gogs", project: "gogs"},
+		// {namespace: "fatedier", project: "frp"},
+		// {namespace: "syncthing", project: "syncthing"},
+		// {namespace: "etcd-io", project: "etcd"},
+		// {namespace: "prometheus", project: "prometheus"},
 	}
 
-	err = gitRepo.LoadCommits()
-	if err != nil {
-		log.Panic(err)
-	}
+	sonarKey := "0971341b9b41282b6216bb222bc326245098a822"
+	sonarUrl := "http://localhost:9000"
+	iterative := false
 
-	contributorAttractorCommits := gitRepo.ContributorAttractorCommits()
-	sort.Slice(contributorAttractorCommits, func(i, j int) bool {
-		commitI := contributorAttractorCommits[i].Commit
-		commitJ := contributorAttractorCommits[j].Commit
-		return commitI.Date.Before(commitJ.Date)
-	})
-
-	qualityAnalyzer := qualityanalyzers.NewSonnar(
-		qualityanalyzers.FormatProjectKey(namespace, project),
-		"ac05a422f5d81b015e01f1a1e01a1344c542ea2a",
-		"http://localhost:9000",
-		gitRepo.ProjectDir(),
-	)
-
-	day := time.Hour * 24
-	analysisDate := time.Now().UTC().Add(-day * time.Duration(len(contributorAttractorCommits)))
-	reader := bufio.NewReader(os.Stdin)
-	silent := false
-	for _, contributorAttractorCommit := range contributorAttractorCommits {
-		analysisDate = analysisDate.Add(day)
-		shortCommitHash := contributorAttractorCommit.Commit.Hash[0:8]
-		log.Printf("Analysing commit %s\n", shortCommitHash)
-		err = gitRepo.Checkout(contributorAttractorCommit.Commit.Hash)
+	for _, githubProject := range githubProjects {
+		log.Printf("start project %s/%s", githubProject.namespace, githubProject.project)
+		err := analyseHistory(githubProject.namespace, githubProject.project, sonarKey, sonarUrl, iterative)
 		if err != nil {
 			log.Panic(err)
 		}
-
-		for {
-			if silent {
-				break
-			}
-
-			fmt.Print("Continue Y (yes), n (no), s (silent)?: ")
-			text, _ := reader.ReadString('\n')
-			text = strings.Trim(strings.ToLower(text), "\n")
-			fmt.Println(text)
-
-			if text == "y" || text == "" {
-				break
-			}
-
-			if text == "n" {
-				os.Exit(0)
-			}
-
-			if text == "s" {
-				silent = true
-				break
-			}
-
-		}
-
-		err = qualityAnalyzer.Run(shortCommitHash, analysisDate)
-		if err != nil {
-			log.Panic(err)
-		}
+		log.Printf("finished project %s/%s", githubProject.namespace, githubProject.project)
 	}
-	// TODO (minor): Remover arquivos temporários deixados pelo sonnar-scanner (problema de lock e de ownership)
-	// Ideia: docker exec usando o sonnar-scanner depois que ele terminou (nem sei se é possível)
 }
