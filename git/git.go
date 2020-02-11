@@ -200,6 +200,6 @@ func (g *GitRepo) ContributorAttractorCommits() []*ContributorAttractorCommit {
 }
 
 func (g *GitRepo) Checkout(ref string) error {
-	_, err := g.cmdFactory.ExecF("git checkout %s", ref)
+	_, err := g.cmdFactory.ExecF("git checkout --force %s", ref)
 	return err
 }

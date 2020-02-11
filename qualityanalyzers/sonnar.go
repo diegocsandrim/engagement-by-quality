@@ -27,6 +27,11 @@ func NewSonnar(projectKey string, sonarLogin string, sonnarHostUrl string, proje
 	}
 }
 
+func (s *Sonnar) canIgnoreGolangciError(reportError string, err error) bool {
+	pattern := ": no go files to analyze"
+	return strings.Contains(reportError, pattern)
+}
+
 func (s *Sonnar) Run(projectVersion string, date time.Time) error {
 	output, err := s.cmdFactory.ExecF("mkdir -p ./72bd2909-e59c-459a-a739-1a7660e9d67d")
 	if err != nil {
@@ -43,7 +48,9 @@ func (s *Sonnar) Run(projectVersion string, date time.Time) error {
 	--issues-exit-code=0 \
 	> ./72bd2909-e59c-459a-a739-1a7660e9d67d/report.xml`)
 	if err != nil {
-		return fmt.Errorf("failed to run golangci-lint: %w", err)
+		if !s.canIgnoreGolangciError(output, err) {
+			return fmt.Errorf("failed to run golangci-lint: %w", err)
+		}
 	}
 
 	projectDate := date.UTC().Format("2006-01-02")
