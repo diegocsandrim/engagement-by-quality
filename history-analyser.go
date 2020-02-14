@@ -78,10 +78,11 @@ func analyseHistory(namespace string, project string, sonarKey string, sonarUrl 
 
 		}
 		if dryRun() {
-			err = qualityAnalyzer.Run(shortCommitHash, analysisDate)
-			if err != nil {
-				return fmt.Errorf("could not run analyser: %w", err)
-			}
+			break
+		}
+		err = qualityAnalyzer.Run(shortCommitHash, analysisDate)
+		if err != nil {
+			return fmt.Errorf("could not run analyser: %w", err)
 		}
 	}
 	return nil
@@ -90,5 +91,5 @@ func analyseHistory(namespace string, project string, sonarKey string, sonarUrl 
 }
 
 func dryRun() bool {
-	return true
+	return false
 }

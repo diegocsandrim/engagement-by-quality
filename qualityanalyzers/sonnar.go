@@ -28,8 +28,7 @@ func NewSonnar(projectKey string, sonarLogin string, sonnarHostUrl string, proje
 }
 
 func (s *Sonnar) canIgnoreGolangciError(reportError string, err error) bool {
-	pattern := ": no go files to analyze"
-	return strings.Contains(reportError, pattern)
+	return true
 }
 
 func (s *Sonnar) Run(projectVersion string, date time.Time) error {
@@ -55,6 +54,7 @@ func (s *Sonnar) Run(projectVersion string, date time.Time) error {
 
 	projectDate := date.UTC().Format("2006-01-02")
 	output, err = s.cmdFactory.ExecF(`docker run --name sonar-scanner --network host -dit -v %s:/root/src sonar-scanner:4.2 \
+	-D sonar.scm.disabled=True \
     -D sonar.host.url=%s \
     -D sonar.projectKey=%s \
     -D sonar.projectBaseDir=/root/src \

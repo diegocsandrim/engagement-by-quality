@@ -76,7 +76,7 @@ func (g *GitRepo) LoadCommits() error {
 	g.contributors = make(map[string]*Contributor)
 
 	commitLinePrefix := "commit:"
-	commitsLog, err := g.cmdFactory.ExecF("git log --all --format='%s%%H %%at %%aE %%P' --name-only", commitLinePrefix)
+	commitsLog, err := g.cmdFactory.ExecF("git log --all --format='%s%%H/%%at/%%aE/%%P' --name-only", commitLinePrefix)
 	if err != nil {
 		return err
 	}
@@ -89,15 +89,15 @@ func (g *GitRepo) LoadCommits() error {
 		if commitLog == "" {
 			continue
 		}
-		splittedLogLine := strings.Split(commitLog, " ")
-		if len(splittedLogLine) < 4 {
+		splittedLogLine := strings.Split(commitLog, "/")
+		if len(splittedLogLine) != 4 {
 			log.Panicf("commits log line is in a bad format: '%s'", commitLog)
 		}
 
 		commitHash := splittedLogLine[0][len(commitLinePrefix):]
 		commitTimestampString := splittedLogLine[1]
 		contributorId := splittedLogLine[2]
-		parentCommitHashs := splittedLogLine[3:]
+		parentCommitHashs := strings.Split(splittedLogLine[3], " ")
 
 		commitFileNames := make([]string, 0)
 
@@ -180,7 +180,7 @@ func (g *GitRepo) ContributorAttractorCommits() []*ContributorAttractorCommit {
 		}
 		parentCommit := g.commits[contributorFirstGoCommit.ParentHash]
 		if parentCommit == nil {
-			log.Println("fail!")
+			log.Printf("Missing required parent commit! parent hash: %s", contributorFirstGoCommit.ParentHash)
 		}
 		contributorAttractorCommit, exists := contributorAttractorCommitsByCommitHash[parentCommit.Hash]
 		if !exists {
