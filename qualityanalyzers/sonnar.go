@@ -62,8 +62,6 @@ func (s *Sonnar) Run(projectVersion string, date time.Time, attractedContributor
 	%s \
 	`, s.projectDir, s.sonnarHostUrl, s.projectKey, s.sonarLogin, projectVersion, projectDate, attractedContributors, reportFlagsParam)
 
-	//TODO: aqui falta colocar quantos contribuidores entraram no projeto, ao invés de assumir 1.  sonar.analysis.[yourKey]
-
 	if err != nil {
 		return fmt.Errorf("failed to start scanner: %w", err)
 	}
