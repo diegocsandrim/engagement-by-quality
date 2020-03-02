@@ -6,54 +6,50 @@ import (
 	"strings"
 	"time"
 
-	"../cmd"
+	"github.com/diegocsandrim/engagement-by-quality/cmd"
+	"github.com/diegocsandrim/engagement-by-quality/qualityanalyzers/sonnarplugins"
 )
 
 type Sonnar struct {
 	projectKey    string
 	sonarLogin    string
 	sonnarHostUrl string
+	sonnarPlugins []sonnarplugins.SonnarPlugin
 	projectDir    string
 	cmdFactory    *cmd.CmdFactory
 }
 
-func NewSonnar(projectKey string, sonarLogin string, sonnarHostUrl string, projectDir string) *Sonnar {
-	return &Sonnar{
+func CreateSonnarAnalyser(projectKey string, sonarLogin string, sonnarHostUrl string, sonnarPlugins []string, projectDir string) (*Sonnar, error) {
+	analyser := Sonnar{
 		projectKey:    projectKey,
 		sonarLogin:    sonarLogin,
 		sonnarHostUrl: sonnarHostUrl,
 		projectDir:    projectDir,
 		cmdFactory:    cmd.NewCmdFactory(projectDir),
 	}
-}
 
-func (s *Sonnar) canIgnoreGolangciError(reportError string, err error) bool {
-	return true
-}
-
-func (s *Sonnar) Run(projectVersion string, date time.Time) error {
-	output, err := s.cmdFactory.ExecF("mkdir -p ./72bd2909-e59c-459a-a739-1a7660e9d67d")
+	plugins, err := sonnarplugins.CreatePlugins(analyser.cmdFactory, sonnarPlugins)
 	if err != nil {
-		return fmt.Errorf("failed to create report path: %w", err)
+		return nil, err
 	}
+	analyser.sonnarPlugins = plugins
 
-	output, err = s.cmdFactory.ExecF(`docker run --rm -v $(pwd):/app -w /app golangci/golangci-lint:v1.23.3 \
-	golangci-lint run \
-	--out-format checkstyle \
-	--max-issues-per-linter=0 \
-	--timeout=5m \
-	--max-same-issues=0 \
-	--uniq-by-line=false \
-	--issues-exit-code=0 \
-	> ./72bd2909-e59c-459a-a739-1a7660e9d67d/report.xml`)
-	if err != nil {
-		if !s.canIgnoreGolangciError(output, err) {
-			return fmt.Errorf("failed to run golangci-lint: %w", err)
+	return &analyser, nil
+}
+
+func (s *Sonnar) Run(projectVersion string, date time.Time, attractedContributors int) error {
+	reportFlags := make([]string, 0, len(s.sonnarPlugins))
+	for _, plugin := range s.sonnarPlugins {
+		err := plugin.Run()
+		if err != nil {
+			return err
 		}
+		reportFlags = append(reportFlags, plugin.ReportFlag())
 	}
+	reportFlagsParam := strings.Join(reportFlags, " \\\n")
 
 	projectDate := date.UTC().Format("2006-01-02")
-	output, err = s.cmdFactory.ExecF(`docker run --name sonar-scanner --network host -dit -v %s:/root/src sonar-scanner:4.2 \
+	output, err := s.cmdFactory.ExecF(`docker run --name sonar-scanner --network host -dit -v %s:/root/src sonar-scanner:4.2 \
 	-D sonar.scm.disabled=True \
     -D sonar.host.url=%s \
     -D sonar.projectKey=%s \
@@ -61,9 +57,10 @@ func (s *Sonnar) Run(projectVersion string, date time.Time) error {
 	-D sonar.login=%s \
 	-D sonar.projectVersion=%s \
 	-D sonar.projectDate=%s \
+	-D sonar.analysis.contributorGain=%d \
 	-D sonar.exclusions=**/vendor/**,**/*.cs,**/*.css,**/*.less,**/*.scss,**/*as,**/*.html,**/*.xhtml,**/*.cshtml,**/*.vbhtml,**/*.aspx,**/*.ascx,**/*.rhtml,**/*.erb,**/*.shtm,**/*.shtml,**/*.jsp,**/*.jspf,**/*.jspx,**/*.java,**/*.jav,**/*.js,**/*.jsx,**/*.vue,**/*.kt,**/*php,**/*php3,**/*php4,**/*php5,**/*phtml,**/*inc,**/*py,**/*.rb,**/*.scala,**/*.ts,**/*.tsx,**/*.vb,**/*.xml,**/*.xsd,**/*.xsl \
-	-D sonar.go.golangci-lint.reportPaths=/root/src/72bd2909-e59c-459a-a739-1a7660e9d67d/report.xml \
-	`, s.projectDir, s.sonnarHostUrl, s.projectKey, s.sonarLogin, projectVersion, projectDate)
+	%s \
+	`, s.projectDir, s.sonnarHostUrl, s.projectKey, s.sonarLogin, projectVersion, projectDate, attractedContributors, reportFlagsParam)
 
 	//TODO: aqui falta colocar quantos contribuidores entraram no projeto, ao invés de assumir 1.  sonar.analysis.[yourKey]
 

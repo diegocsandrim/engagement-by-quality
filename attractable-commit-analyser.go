@@ -1,19 +1,16 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"log"
-	"os"
 	"sort"
-	"strings"
 	"time"
 
-	"./git"
-	"./qualityanalyzers"
+	"github.com/diegocsandrim/engagement-by-quality/git"
+	"github.com/diegocsandrim/engagement-by-quality/qualityanalyzers"
 )
 
-func analyseHistory(namespace string, project string, sonarKey string, sonarUrl string, iterative bool) error {
+func analyseAttractableCommits(namespace string, project string, config Config) error {
 	gitRepo := git.NewGitRepo(namespace, project)
 
 	err := gitRepo.Clone()
@@ -30,19 +27,23 @@ func analyseHistory(namespace string, project string, sonarKey string, sonarUrl 
 	sort.Slice(contributorAttractorCommits, func(i, j int) bool {
 		commitI := contributorAttractorCommits[i].Commit
 		commitJ := contributorAttractorCommits[j].Commit
-		return commitI.Date.Before(commitJ.Date)
+		return commitI.Id < commitJ.Id
 	})
 
-	qualityAnalyzer := qualityanalyzers.NewSonnar(
+	qualityAnalyzer, err := qualityanalyzers.CreateSonnarAnalyser(
 		qualityanalyzers.FormatProjectKey(namespace, project),
-		sonarKey,
-		sonarUrl,
+		config.SonarKey,
+		config.SonarURL,
+		config.SonarPlugins,
 		gitRepo.ProjectDir(),
 	)
 
+	if err != nil {
+		return err
+	}
+
 	day := time.Hour * 24
 	analysisDate := time.Now().UTC().Add(-day * time.Duration(len(contributorAttractorCommits)))
-	reader := bufio.NewReader(os.Stdin)
 
 	for i, contributorAttractorCommit := range contributorAttractorCommits {
 		analysisDate = analysisDate.Add(day)
@@ -53,43 +54,12 @@ func analyseHistory(namespace string, project string, sonarKey string, sonarUrl 
 			return fmt.Errorf("could not checkout to commit: %w", err)
 		}
 
-		for {
-			if !iterative {
-				break
-			}
+		attractedContributors := len(contributorAttractorCommit.Contributors)
 
-			fmt.Print("Continue Y (yes), n (no), s (silent)?: ")
-			text, _ := reader.ReadString('\n')
-			text = strings.Trim(strings.ToLower(text), "\n")
-			fmt.Println(text)
-
-			if text == "y" || text == "" {
-				break
-			}
-
-			if text == "n" {
-				os.Exit(0)
-			}
-
-			if text == "s" {
-				iterative = false
-				break
-			}
-
-		}
-		if dryRun() {
-			break
-		}
-		err = qualityAnalyzer.Run(shortCommitHash, analysisDate)
+		err = qualityAnalyzer.Run(shortCommitHash, analysisDate, attractedContributors)
 		if err != nil {
 			return fmt.Errorf("could not run analyser: %w", err)
 		}
 	}
 	return nil
-	// TODO (minor): Remover arquivos temporários deixados pelo sonnar-scanner (problema de lock e de ownership)
-	// Ideia: docker exec usando o sonnar-scanner depois que ele terminou (nem sei se é possível)
-}
-
-func dryRun() bool {
-	return false
 }

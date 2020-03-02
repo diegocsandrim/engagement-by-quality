@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"../cmd"
+	"github.com/diegocsandrim/engagement-by-quality/cmd"
 )
 
 const GitBaseDir string = "/src/github.com"
@@ -76,11 +76,12 @@ func (g *GitRepo) LoadCommits() error {
 	g.contributors = make(map[string]*Contributor)
 
 	commitLinePrefix := "commit:"
-	commitsLog, err := g.cmdFactory.ExecF("git log --all --format='%s%%H/%%at/%%aE/%%P' --name-only", commitLinePrefix)
+	commitsLog, err := g.cmdFactory.ExecF("git log --all --format='%s%%H/%%at/%%aE/%%P' --reverse --name-only", commitLinePrefix)
 	if err != nil {
 		return err
 	}
 
+	commitId := 0
 	commitsLogLines := strings.Split(commitsLog, "\n")
 
 	for line := 0; line < len(commitsLogLines); line++ {
@@ -142,10 +143,13 @@ func (g *GitRepo) LoadCommits() error {
 
 		commitTimestamp := time.Unix(commitTimestampInt, 0)
 
-		commit := NewCommit(commitHash, parentCommitHashs[0], commitTimestamp, contributor, hasGoCode)
+		commit := NewCommit(commitId, commitHash, parentCommitHashs[0], commitTimestamp, contributor, hasGoCode)
+		commitId++
+
 		contributor.AddCommit(commit)
 
 		g.commits[commit.Hash] = commit
+
 	}
 	return nil
 }
@@ -178,10 +182,19 @@ func (g *GitRepo) ContributorAttractorCommits() []*ContributorAttractorCommit {
 		if contributorFirstGoCommit.ParentHash == "" {
 			continue
 		}
+
 		parentCommit := g.commits[contributorFirstGoCommit.ParentHash]
 		if parentCommit == nil {
 			log.Printf("Missing required parent commit! parent hash: %s", contributorFirstGoCommit.ParentHash)
 		}
+
+		if !contributor.IsMainContributor() {
+			//Find a parent commit that is authored by other contributor
+			for parentCommit.Contributor == contributor {
+				parentCommit = g.commits[parentCommit.ParentHash]
+			}
+		}
+
 		contributorAttractorCommit, exists := contributorAttractorCommitsByCommitHash[parentCommit.Hash]
 		if !exists {
 			contributorAttractorCommit = NewContributorAttractorCommit(parentCommit)
