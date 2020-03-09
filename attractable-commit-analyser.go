@@ -37,10 +37,10 @@ func analyseAttractableCommits(namespace string, project string, config Config) 
 		config.SonarPlugins,
 		gitRepo.ProjectDir(),
 	)
-
 	if err != nil {
 		return err
 	}
+	defer qualityAnalyzer.Close()
 
 	day := time.Hour * 24
 	analysisDate := time.Now().UTC().Add(-day * time.Duration(len(contributorAttractorCommits)))

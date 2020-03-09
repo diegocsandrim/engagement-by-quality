@@ -23,12 +23,14 @@ func main() {
 						Name:        "sonarkey",
 						Usage:       "Sonarqube token",
 						EnvVars:     []string{"EQ_SONAR_TOKEN"},
+						Required:    true,
 						Destination: &(config.SonarKey),
 					},
 					&cli.StringFlag{
 						Name:        "sonarurl",
 						Usage:       "Sonarqube URL",
 						EnvVars:     []string{"EQ_SONAR_URL"},
+						Required:    true,
 						Destination: &(config.SonarURL),
 					},
 					&cli.StringSliceFlag{

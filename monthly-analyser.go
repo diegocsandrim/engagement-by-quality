@@ -38,10 +38,10 @@ func analyseAttractableCommitsBatch(namespace string, project string, config Con
 		config.SonarPlugins,
 		gitRepo.ProjectDir(),
 	)
-
 	if err != nil {
 		return err
 	}
+	defer qualityAnalyzer.Close()
 
 	maxRunPerProject := float64(batchAmmount)
 	contributorAttractorCommitsLen := float64(len(contributorAttractorCommits))
