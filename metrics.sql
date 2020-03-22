@@ -44,3 +44,14 @@ order by
 -- "sqale_index"
 -- "violations"
 -- "vulnerabilities"
+
+
+-- extract contributor gain from scanner context
+select
+	substring
+		(
+			substring(convert_from(context_data, 'UTF-8'), 'sonar.analysis.contributorGain=\d*')
+			from length('sonar.analysis.contributorGain=')+1
+		)::integer as contributor_gain
+from
+    ce_scanner_context;
