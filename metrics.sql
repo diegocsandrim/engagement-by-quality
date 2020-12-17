@@ -7,23 +7,25 @@
 select distinct
 	projects.kee,
 	ce_activity.submitted_at,
+	substring(substring(convert_from(ce_scanner_context.context_data, 'UTF-8'), 'sonar.analysis.contributorGain=\d*') from length('sonar.analysis.contributorGain=')+1)::integer as contributor_gain,
 	metrics.name, metrics.description, metrics.short_name,
 	project_measures.value, project_measures.text_value, project_measures.alert_text, project_measures.description, project_measures.variation_value_1 
 from projects 
 	left join ce_activity
 		on projects.project_uuid=ce_activity.component_uuid
+	left join ce_scanner_context
+		on ce_activity.uuid = ce_scanner_context.task_uuid
 	left join project_measures
 		on ce_activity.analysis_uuid = project_measures.analysis_uuid
 	left join metrics
 		on project_measures.metric_id=metrics.id
 where
-	projects.kee='cockroachdb:cockroach'
+	projects.kee='kelseyhightower:envconfig'
 	--and ce_activity.submitted_at=1582683162603
-	and metrics.name in ('vulnerabilities') -- in ('bugs',)
+	and metrics.name in ('complexity') -- in ('bugs',)
 order by
 	projects.kee,
 	ce_activity.submitted_at
-
 
 --metrics of interest:
 -- "bugs"
@@ -48,10 +50,16 @@ order by
 
 -- extract contributor gain from scanner context
 select
-	substring
-		(
-			substring(convert_from(context_data, 'UTF-8'), 'sonar.analysis.contributorGain=\d*')
-			from length('sonar.analysis.contributorGain=')+1
-		)::integer as contributor_gain
+	substring(substring(convert_from(context_data, 'UTF-8'), 'sonar.analysis.contributorGain=\d*') from length('sonar.analysis.contributorGain=')+1)::integer as contributor_gain
 from
     ce_scanner_context;
+
+
+task_uuid
+created_at
+updated_at
+
+
+"AXPAWbZgdLL8_IXJ_HbQ"
+1596659971718
+1596659971718

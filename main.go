@@ -55,8 +55,8 @@ func main() {
 					project := repositoryParts[1]
 
 					log.Printf("starting namespace %s, project %s", namespace, project)
-					maxRun := 20
-					err := analyseAttractableCommitsBatch(namespace, project, config, maxRun)
+					batch := 20
+					err := analyseAttractableCommitsBatch(namespace, project, config, batch)
 					if err != nil {
 						return cli.Exit(err.Error(), 1)
 					}
