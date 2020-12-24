@@ -3,6 +3,7 @@ package git
 import (
 	"fmt"
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -210,6 +211,47 @@ func (g *GitRepo) ContributorAttractorCommits() []*ContributorAttractorCommit {
 	}
 
 	return contributorAttractorCommits
+}
+
+func (g *GitRepo) CodeCommitsByMonth() []*MonthCommits {
+	monthlyCommitsMap := map[MonthYear]*MonthCommits{}
+
+	for _, commit := range g.commits {
+		if !commit.HasGoCode {
+			continue
+		}
+
+		monthYear := MonthYear{
+			Month: commit.Date.Month(),
+			Year:  commit.Date.Year(),
+		}
+		monthCommits, exists := monthlyCommitsMap[monthYear]
+		if !exists {
+			monthCommits = &MonthCommits{
+				Month:   monthYear,
+				Commits: []*Commit{},
+			}
+			monthlyCommitsMap[monthYear] = monthCommits
+		}
+
+		monthCommits.Commits = append(monthCommits.Commits, commit)
+	}
+
+	monthlyCommits := make([]*MonthCommits, 0, len(monthlyCommitsMap))
+	for _, monthCommits := range monthlyCommitsMap {
+		monthlyCommits = append(monthlyCommits, monthCommits)
+	}
+
+	sort.Slice(monthlyCommits, func(i, j int) bool {
+		commit1, commit2 := monthlyCommits[i], monthlyCommits[j]
+
+		if commit1.Month.Year == commit2.Month.Year {
+			return commit1.Month.Month < commit2.Month.Month
+		}
+		return commit1.Month.Year < commit2.Month.Year
+	})
+
+	return monthlyCommits
 }
 
 func (g *GitRepo) Checkout(ref string) error {
