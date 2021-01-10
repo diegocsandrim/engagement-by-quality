@@ -7,12 +7,15 @@
 select distinct
 	projects.kee,
 	ce_activity.submitted_at,
+	snapshots.created_at,
 	substring(substring(convert_from(ce_scanner_context.context_data, 'UTF-8'), 'sonar.analysis.contributorGain=\d*') from length('sonar.analysis.contributorGain=')+1)::integer as contributor_gain,
 	metrics.name, metrics.description, metrics.short_name,
 	project_measures.value, project_measures.text_value, project_measures.alert_text, project_measures.description, project_measures.variation_value_1 
 from projects 
 	left join ce_activity
 		on projects.project_uuid=ce_activity.component_uuid
+	left join snapshots
+		on snapshots.uuid = ce_activity.analysis_uuid
 	left join ce_scanner_context
 		on ce_activity.uuid = ce_scanner_context.task_uuid
 	left join project_measures
@@ -27,6 +30,7 @@ order by
 	projects.kee,
 	ce_activity.submitted_at
 
+	
 --metrics of interest:
 -- "bugs"
 -- "code_smells"

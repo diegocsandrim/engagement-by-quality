@@ -23,6 +23,8 @@ A-B-C-D-E
 ```
 sudo sysctl -w vm.max_map_count=262144 # or edit /etc/sysctl.conf
 docker-compose up
+sudo mkdir -p /usr/share/eq
+sudo chown $USER /usr/share/eq
 ```
 
 # Manual configuration

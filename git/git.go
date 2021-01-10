@@ -11,7 +11,7 @@ import (
 	"github.com/diegocsandrim/engagement-by-quality/cmd"
 )
 
-const GitBaseDir string = "/src/github.com"
+const GitBaseDir string = "/usr/share/eq/github.com"
 
 type GitRepo struct {
 	namespace    string

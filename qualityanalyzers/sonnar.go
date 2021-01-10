@@ -49,7 +49,7 @@ func (s *Sonnar) Run(projectVersion string, date time.Time, attractedContributor
 	reportFlagsParam := strings.Join(reportFlags, " \\\n")
 
 	projectDate := date.UTC().Format("2006-01-02")
-	output, err := s.cmdFactory.ExecF(`docker run --name sonar-scanner --network host -dit -v %s:/root/src sonar-scanner:4.2 \
+	output, err := s.cmdFactory.ExecF(`docker run --name sonar-scanner --network host -dit -v %s:/root/src diegocsandrim/sonar-scanner:4.2 \
 	-D sonar.scm.disabled=True \
     -D sonar.host.url=%s \
     -D sonar.projectKey=%s \
@@ -113,7 +113,7 @@ func (s *Sonnar) Close() {
 }
 
 func (s *Sonnar) cleanTempDirs() {
-	output, err := s.cmdFactory.ExecF(`docker run -i --rm --network host -v %s:/root/src --entrypoint='' sonar-scanner:4.2 \
+	output, err := s.cmdFactory.ExecF(`docker run -i --rm --network host -v %s:/root/src --entrypoint='' diegocsandrim/sonar-scanner:4.2 \
 	rm -rf /root/src/.scannerwork \
 	`, s.projectDir)
 	if err != nil {
