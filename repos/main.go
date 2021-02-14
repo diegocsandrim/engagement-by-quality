@@ -1,140 +1,86 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"math"
+	"log"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 )
 
+type RepositoriesResult struct {
+	Items []struct {
+		FullName string `json:"full_name"`
+	} `json:"items"`
+}
+
+// Finds the top 1000 most forked repositories.
+// Filters used:
+// - Only repositories with Golang
+// - Only repositories created from 2012-01-01 to 2015-01-01
+// - Only repositories that had a push after 2018-01-01
+// Uses env GH_TOKEN for authentication
+//
+
 func main() {
-	repos := []string{
-		"AdguardTeam/AdguardFilters",
-		"Alluxio/alluxio",
-		"ampproject/amphtml",
-		"angular/angular-cli",
-		"angular/components",
-		"ansible/ansible",
-		"ant-design/ant-design",
-		"apache/beam",
-		"apache/incubator-mxnet",
-		"apache/kafka",
-		"apache/spark",
-		"apple/swift",
-		"ARMmbed/mbed-os",
-		"Automattic/wp-calypso",
-		"bitcoin/bitcoin",
-		"brave/browser-laptop",
-		"brianchandotcom/liferay-portal",
-		"ceph/ceph",
-		"CleverRaven/Cataclysm-DDA",
-		"cms-sw/cms-sw.github.io",
-		"cms-sw/cmssw",
-		"cockroachdb/cockroach",
-		"CocoaPods/Specs",
-		"code-dot-org/code-dot-org",
-		"DefinitelyTyped/DefinitelyTyped",
-		"dimagi/commcare-hq",
-		"dotnet/cli",
-		"dotnet/coreclr",
-		"dotnet/corefx",
-		"dotnet/roslyn",
-		"eclipse/che",
-		"edx/edx-platform",
-		"elastic/elasticsearch",
-		"elastic/kibana",
-		"electron/electron",
-		"facebook/react",
-		"fastlane/fastlane",
-		"firehol/blocklist-ipsets",
-		"flutter/flutter",
-		"freeCodeCamp/freeCodeCamp",
-		"gatsbyjs/gatsby",
-		"gentoo/gentoo",
-		"godotengine/godot",
-		"golang/go",
-		"grpc/grpc",
-		"hacks-guide/Guide_3DS",
-		"hashicorp/terraform",
-		"helm/charts",
-		"home-assistant/home-assistant",
-		"Homebrew/homebrew-cask",
-		"homebrew/homebrew-core",
-		"ionic-team/ionic",
-		"istio/istio",
-		"jlippold/tweakCompatible",
-		"jlord/patchwork",
-		"joomla/joomla-cms",
-		"JuliaLang/julia",
-		"keybase/client",
-		"kubernetes/kubernetes",
-		"kubernetes/test-infra",
-		"kubernetes/website",
-		"laravel/framework",
-		"magento/magento2",
-		"ManageIQ/manageiq",
-		"mapsme/omim",
-		"MarlinFirmware/Marlin",
-		"Microsoft/TypeScript",
-		"Microsoft/vscode",
-		"MicrosoftDocs/azure-docs",
-		"moby/moby",
-		"mui-org/material-ui",
-		"nextcloud/server",
-		"NixOS/nixpkgs",
-		"nodejs/node",
-		"odoo/odoo",
-		"openshift/openshift-ansible",
-		"openshift/origin",
-		"oppia/oppia",
-		"owncloud/core",
-		"PaddlePaddle/Paddle",
-		"pandas-dev/pandas",
-		"phalcon/docs",
-		"pingcap/tidb",
-		"python/cpython",
-		"pytorch/pytorch",
-		"rails/rails",
-		"rust-lang/crates.io-index",
-		"rust-lang/rust",
-		"saltstack/salt",
-		"scikit-learn/scikit-learn",
-		"servo/servo",
-		"symfony/symfony",
-		"tensorflow/tensorflow",
-		"tgstation/tgstation",
-		"vgstation-coders/vgstation13",
-		"web-platform-tests/wpt",
-		"WordPress/gutenberg",
-		"XX-net/XX-Net",
-		"zephyrproject-rtos/zephyr",
-		"zulip/zulip",
+	token, _ := os.LookupEnv("GH_TOKEN")
+	if token == "" {
+		log.Fatal("GH_TOKEN environment variable is not set. Tip: create the token at https://github.com/settings/tokens and set the env var GH_TOKEN to its value")
 	}
 
-	for _, repo := range repos {
-		// time.Sleep(1 * time.Second)
-		url := fmt.Sprintf("https://api.github.com/repos/%s/languages", repo)
-		req, err := http.NewRequest("GET", url, nil)
-		req.Header.Add("Authorization", "token 3ba1abaf0bf06fb0cf2986d134fda22e95f879ae")
-		resp, err := http.DefaultClient.Do(req)
+	repositoryNames, err := fetchRepositoryNames(token)
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	output := strings.Join(repositoryNames, "\n")
+	fmt.Println(output)
+}
+
+func fetchRepositoryNames(token string) ([]string, error) {
+	urlFormat := "https://api.github.com/search/repositories?sort=%s&per_page=%d&page=%d&q=%s"
+	sort := "fork"
+	perPage := 100
+	lastPage := 10
+	query := "language:Go+created:2012-01-01..2015-01-01+pushed:2018-01-01..*+is:public"
+
+	var repositoriesResult RepositoriesResult
+
+	repositoryNames := make([]string, 0, 1000)
+
+	for page := 1; page <= lastPage; page++ {
+		log.Printf("Requesting page %d", page)
+		url := fmt.Sprintf(urlFormat, sort, perPage, page, query)
+		req, err := http.NewRequest("GET", url, nil)
 		if err != nil {
-			panic(err)
+			return nil, fmt.Errorf("failed to create the request: %w", err)
 		}
+
+		req.Header.Add("Accept", "application/vnd.github.v3+json")
+		req.Header.Add("Authorization", fmt.Sprintf("token %s", token))
+
+		http.DefaultClient.Timeout = 1 * time.Minute
+
+		resp, err := http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, fmt.Errorf("failed to fetch page result: %w", err)
+		}
+
 		defer resp.Body.Close()
 
-		body, err := ioutil.ReadAll(resp.Body)
-		bodyStr := string(body)
+		decoder := json.NewDecoder(resp.Body)
+		err = decoder.Decode(&repositoriesResult)
+		if err != nil {
+			return nil, fmt.Errorf("failed decoding response: %w", err)
+		}
 
-		if resp.StatusCode != http.StatusOK {
-			fmt.Println(bodyStr)
-			panic(resp.StatusCode)
+		for _, repositoryResponse := range repositoriesResult.Items {
+			repositoryNames = append(repositoryNames, repositoryResponse.FullName)
 		}
-		// fmt.Println(bodyStr)'
-		too := math.Min(10, float64(len(bodyStr)))
-		if strings.Contains(bodyStr[0:int64(too)], "\"Go\"") {
-			fmt.Println(repo)
-		}
+
 	}
+
+	return repositoryNames, nil
 }
