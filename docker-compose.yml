@@ -27,6 +27,6 @@ services:
         - "8080:80"
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@admin.com
-      PGADMIN_DEFAULT_PASSWORD: UU4n2wDGjwM
+      PGADMIN_DEFAULT_PASSWORD: admin
     depends_on:
       - sonar-postgres
