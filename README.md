@@ -49,6 +49,10 @@ Desativar (pq documentação não é o objetivo dessa análise e testes não sã
 - Failed unit tests should be fixed
 
 
+## Setup Postgres
+
+Habilitar o tablefunc `CREATE extension tablefunc;`
+
 # Analisando um repositório
 
 Faça o build da ferramenta a partir do diretório raiz:
