@@ -17,8 +17,6 @@ from projects
 		on project_measures.metric_id=metrics.id
 where
 	metrics.name in (
-		'blocker_violations',
-		'bugs',
 		'classes',
 		'code_smells',
 		'cognitive_complexity',
@@ -30,7 +28,6 @@ where
 		'duplicated_files',
 		'duplicated_lines',
 		'duplicated_lines_density',
-		'effort_to_reach_maintainability_rating_a',
 		'file_complexity',
 		'files',
 		'functions',
@@ -41,15 +38,12 @@ where
 		'ncloc',
 		'open_issues',
 		'reliability_rating',
-		'reliability_remediation_effort',
 		'security_rating',
-		'security_remediation_effort',
 		'sqale_debt_ratio',
 		'sqale_index',
 		'sqale_rating',
 		'statements',
-		'violations',
-		'vulnerabilities'
+		'violations'
 		)
 	and projects.scope='PRJ'
 order by

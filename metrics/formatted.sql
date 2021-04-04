@@ -3,8 +3,6 @@
 		keys[1] as project_name,
 		keys[2]::date as date,
 		keys[3]::integer as contributor_gain,
-		blocker_violations,
-		bugs,
 		classes,
 		code_smells,
 		cognitive_complexity,
@@ -16,7 +14,6 @@
 		duplicated_files,
 		duplicated_lines,
 		duplicated_lines_density,
-		effort_to_reach_maintainability_rating_a,
 		file_complexity,
 		files,
 		functions,
@@ -27,15 +24,12 @@
 		ncloc,
 		open_issues,
 		reliability_rating,
-		reliability_remediation_effort,
 		security_rating,
-		security_remediation_effort,
 		sqale_debt_ratio,
 		sqale_index,
 		sqale_rating,
 		statements,
-		violations,
-		vulnerabilities
+		violations
 	FROM crosstab('select
 	array [
 	projects.kee::text,
@@ -43,7 +37,7 @@
 	substring(substring(convert_from(ce_scanner_context.context_data, ''UTF-8''), ''sonar.analysis.contributorGain=\d*'') from length(''sonar.analysis.contributorGain='')+1)::text
 	] keys,
 	metrics.name as metric_name,
-	replace(project_measures.value::text, ''.'', '','') AS me	tric_value
+	replace(project_measures.value::text, ''.'', '','') AS metric_value
 from projects 
 	left join ce_activity
 		on projects.project_uuid=ce_activity.component_uuid
@@ -57,8 +51,6 @@ from projects
 		on project_measures.metric_id=metrics.id
 where
 	metrics.name in (
-		''blocker_violations'',
-		''bugs'',
 		''classes'',
 		''code_smells'',
 		''cognitive_complexity'',
@@ -70,7 +62,6 @@ where
 		''duplicated_files'',
 		''duplicated_lines'',
 		''duplicated_lines_density'',
-		''effort_to_reach_maintainability_rating_a'',
 		''file_complexity'',
 		''files'',
 		''functions'',
@@ -81,23 +72,19 @@ where
 		''ncloc'',
 		''open_issues'',
 		''reliability_rating'',
-		''reliability_remediation_effort'',
 		''security_rating'',
-		''security_remediation_effort'',
 		''sqale_debt_ratio'',
 		''sqale_index'',
 		''sqale_rating'',
 		''statements'',
-		''violations'',
-		''vulnerabilities''
+		''violations''
 		)
 	and projects.scope=''PRJ''
 order by
 	projects.kee,
 	snapshots.created_at,
 	metrics.name') 
-		AS final_result(keys TEXT[], blocker_violations TEXT,
-	bugs TEXT,
+		AS final_result(keys TEXT[],
 	classes TEXT,
 	code_smells TEXT,
 	cognitive_complexity TEXT,
@@ -109,7 +96,6 @@ order by
 	duplicated_files TEXT,
 	duplicated_lines TEXT,
 	duplicated_lines_density TEXT,
-	effort_to_reach_maintainability_rating_a TEXT,
 	file_complexity TEXT,
 	files TEXT,
 	functions TEXT,
@@ -120,12 +106,9 @@ order by
 	ncloc TEXT,
 	open_issues TEXT,
 	reliability_rating TEXT,
-	reliability_remediation_effort TEXT,
 	security_rating TEXT,
-	security_remediation_effort TEXT,
 	sqale_debt_ratio TEXT,
 	sqale_index TEXT,
 	sqale_rating TEXT,
 	statements TEXT,
-	violations TEXT,
-	vulnerabilities TEXT);
+	violations TEXT);

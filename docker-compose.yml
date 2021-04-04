@@ -7,6 +7,8 @@ services:
     environment:
       POSTGRES_USER: sonar
       POSTGRES_PASSWORD: sonar
+    volumes:
+      - pgdata:/var/lib/postgresql/data
 
   sonarqube:
     image: "sonarqube:7.9.2-community"
@@ -30,3 +32,6 @@ services:
       PGADMIN_DEFAULT_PASSWORD: admin
     depends_on:
       - sonar-postgres
+
+volumes:
+  pgdata:
