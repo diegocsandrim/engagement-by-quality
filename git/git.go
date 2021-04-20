@@ -77,7 +77,7 @@ func (g *GitRepo) LoadCommits() error {
 	g.contributors = make(map[string]*Contributor)
 
 	commitLinePrefix := "commit:"
-	commitsLog, err := g.cmdFactory.ExecF("git log --all --format='%s%%H/%%at/%%aE/%%P' --reverse --name-only", commitLinePrefix)
+	commitsLog, err := g.cmdFactory.ExecF("git log --all --format='%s%%H/////%%at/////%%aE/////%%P' --reverse --name-only", commitLinePrefix)
 	if err != nil {
 		return err
 	}
@@ -91,7 +91,7 @@ func (g *GitRepo) LoadCommits() error {
 		if commitLog == "" {
 			continue
 		}
-		splittedLogLine := strings.Split(commitLog, "/")
+		splittedLogLine := strings.Split(commitLog, "/////")
 		if len(splittedLogLine) != 4 {
 			log.Panicf("commits log line is in a bad format: '%s'", commitLog)
 		}
